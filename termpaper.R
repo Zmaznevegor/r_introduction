@@ -7,37 +7,67 @@ library(xlsx)
 library(gridExtra)
 library(lubridate)
 library(staplr)
+library (magrittr)
 
-
-# Getting allthe campaigns in one with for-loop
+# Getting all the reports downloaded from the Facebook to our directory
 filenames <- dir(pattern = "*.csv")
-facebook_ads_data<- tibble()
 
-for (i in 1:length(filenames)) {
-  facebook_ads_data <- read_csv(filenames[i])%>%
-    select(-Starts, -Ends, -"Reporting starts", -"Reporting ends") %>%
-    rename(ad_name = "Ad name",
-           ad_set_name = "Ad set name",
-           day = Day,
-           ad_delivery = "Ad delivery",
-           reach = Reach,
-           impressions = Impressions,
-           frequency = Frequency,
-           result_type = "Result Type",
-           results = Results,
-           cost_per_result = "Cost per result",
-           amount_spent = "Amount spent (RUB)",
-           CPM = "CPM (cost per 1,000 impressions)",
-           link_clicks = "Link clicks",
-           CPC = "CPC (cost per link click)",
-           CTR = "CTR (link click-through rate)",
-           CPC_all = "CPC (all)",
-           CTR_all = "CTR (all)",
-           clicks_all = "Clicks (all)",
-           ad_ID = "Ad ID",
-           campaign_ID = "Campaign ID"
-    ) %>%
-    bind_rows(facebook_ads_data)
+# Creating a dataframe that will be used for all the analysis
+
+facebook_ads_data<- data.frame() 
+facebook_ads_data[1,] <- NA
+facebook_ads_data[ , c("ad_name",
+          "ad_set_name",
+          "day",
+          "reach",
+          "impressions",
+          "frequency",
+          "result_type",
+          "results",
+          "cost_per_result",
+          "amount_spent",
+          "CPM",
+          "link_clicks",
+          "CPC",
+          "CTR",
+          "CPC_all",
+          "CTR_all",
+          "clicks_all",
+          "ad_ID",
+          "campaign_ID")] <- NA
+facebook_ads_data <- na.omit(facebook_ads_data)
+
+# We want to save the data by each campiagn for the possible data handling in the later processes
+
+all_campaigns <- list()
+
+# Here we need to ensure that our data is combined correctly and check whether it is suitable for a better scalabilty
+
+for (i in 1:length(filenames)){
+  all_campaigns[[i]] <- read_csv(filenames[i]) %>%
+  select(-Starts, -Ends, -"Reporting starts", -"Reporting ends", -"Ad delivery") %>%
+  rename(ad_name = "Ad name",
+         ad_set_name = "Ad set name",
+         day = Day,
+         reach = Reach,
+         impressions = Impressions,
+         frequency = Frequency,
+         result_type = "Result Type",
+         results = Results,
+         cost_per_result = "Cost per result",
+         amount_spent = "Amount spent (RUB)",
+         CPM = "CPM (cost per 1,000 impressions)",
+         link_clicks = "Link clicks",
+         CPC = "CPC (cost per link click)",
+         CTR = "CTR (link click-through rate)",
+         CPC_all = "CPC (all)",
+         CTR_all = "CTR (all)",
+         clicks_all = "Clicks (all)",
+         ad_ID = "Ad ID",
+         campaign_ID = "Campaign ID")
+
+ facebook_ads_data <- bind_rows(mutate_all(all_campaigns[[i]], as.character), 
+                                mutate_all(facebook_ads_data, as.character))
 }
 
 # It is a common practice for the SMM managers to duplicate ad sets to increase the overall reach of the campaign
@@ -49,9 +79,50 @@ facebook_ads_data$ad_set_name <- gsub ("— Копия","", facebook_ads_data$ad
 grep(".— Копия", facebook_ads_data$ad_set_name)
 adsetnames <- unique(facebook_ads_data$ad_set_name)
 
+
+reg <- lm(results ~ amount_spent, all_campaigns[[3]])
+summary(reg)
+
+x <- cbind(predict(reg, interval = "confidence"),
+           predict(reg, interval = "prediction")[,2:3])
+colnames(x)<- 
+  c("fit", "conf lwr", "conf upr", "pred lwr", "pred upr")
+
+a3 <- cbind(x, all_campaigns[[3]])
+
+ %>% 
+  ggplot(aes(x = hour))+ # general plot 
+  
+  geom_ribbon(aes(ymin =`pred lwr`, ymax = `pred upr`,fill = "Prediction"), alpha = .5)+ # prediction stripe
+  geom_ribbon(aes(ymin =`conf lwr`, ymax = `conf upr`,fill = "Confidence"), alpha = .5)+ # confidence stripe
+  
+  geom_line(aes(y= fit, col = "Expected value"))+ # fit line
+  geom_point(aes(y= hourly.volume, col = "Observations"), alpha = .1)+ # hourly.volume dots
+  theme_classic()+
+  scale_fill_manual(values = alpha(c("blue","lightblue"), 0.5))+ #custom colour
+  scale_color_manual(
+    values = c("red", "black"),
+    guide = guide_legend(override.aes = 
+                           list (
+                             linetype = c("solid", "blank"),
+                             shape = c(NA,16)
+                           ))
+  )
+
+ggplot1 <- ggplot() +
+  geom_point(aes(x = all_campaigns[[3]]$amount_spent, y = reg$fitted.values),
+             shape = 1, 
+             alpha =0.2) +
+  geom_point(data = all_campaigns[[3]], 
+             aes(x = amount_spent, 
+                 y = results), 
+             color = "red")
+ggplot1
+
+
 # The following loop will provide the ovearall summary of our campaigns and analysis for every campaign
 
-for (i in 1:length(adsetnames)) {
+for (i in (1:length(adsetnames))) {
   
   temp_df_summary <- facebook_ads_data %>%
     filter(ad_set_name == adsetnames[i],
