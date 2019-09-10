@@ -123,6 +123,11 @@ ggplot1
 # The following loop will provide the ovearall summary of our campaigns and analysis for every campaign
 
 for (i in (1:length(adsetnames))) {
+=======
+# The following loop will provide the ovearall summary of our campaigns and analysis for every campaign
+
+for (i in 1:length(adsetnames)) {
+>>>>>>> 21c250d57d7a48d8f40357b330bc7b96a0f80672
   
   temp_df_summary <- facebook_ads_data %>%
     filter(ad_set_name == adsetnames[i],
