@@ -79,7 +79,7 @@ facebook_ads_data$ad_set_name <- gsub ("— Копия","", facebook_ads_data$ad
 grep(".— Копия", facebook_ads_data$ad_set_name)
 adsetnames <- unique(facebook_ads_data$ad_set_name)
 
-
+# Linear regression + loop
 reg <- lm(results ~ amount_spent, all_campaigns[[3]])
 summary(reg)
 
@@ -90,7 +90,7 @@ colnames(x)<-
 
 a3 <- cbind(x, all_campaigns[[3]])
 
- %>% 
+ a3%>% 
   ggplot(aes(x = hour))+ # general plot 
   
   geom_ribbon(aes(ymin =`pred lwr`, ymax = `pred upr`,fill = "Prediction"), alpha = .5)+ # prediction stripe
