@@ -1,13 +1,13 @@
-library(dplyr)
-library(ggplot2)
-library(tidyr)
-library(readr)
-library(grid)
-library(xlsx)
-library(gridExtra)
-library(lubridate)
-library(staplr)
-library (magrittr)
+library (dplyr)
+library (ggplot2)
+library (tidyr)
+library (readr)
+library (grid)
+library (xlsx)
+library (gridExtra)
+library (lubridate)
+library (staplr)
+
 
 # Getting all the reports downloaded from the Facebook to our directory
 filenames <- dir(pattern = "*.csv")
@@ -122,13 +122,8 @@ ggplot1
 
 # The following loop will provide the ovearall summary of our campaigns and analysis for every campaign
 
-for (i in (1:length(adsetnames))) {
-=======
-# The following loop will provide the ovearall summary of our campaigns and analysis for every campaign
-
 for (i in 1:length(adsetnames)) {
->>>>>>> 21c250d57d7a48d8f40357b330bc7b96a0f80672
-  
+          
   temp_df_summary <- facebook_ads_data %>%
     filter(ad_set_name == adsetnames[i],
            impressions != 0) %>%
@@ -319,5 +314,3 @@ CPC_general <- daybyday_time_CPC %>%
 pdf()
 grid.arrange(impression_general,CPM_general,CPL_general,CPC_general, nrow=4,ncol=1, top="Campaigns Comparison")
 dev.off()
-
-# Previous version
