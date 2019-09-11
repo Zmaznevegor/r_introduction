@@ -7,7 +7,6 @@ library(xlsx)
 library(gridExtra)
 library(lubridate)
 library(staplr)
-library (magrittr)
 
 # Getting all the reports downloaded from the Facebook to our directory
 filenames <- dir(pattern = "*.csv")
@@ -22,7 +21,6 @@ facebook_ads_data[ , c("ad_name",
           "reach",
           "impressions",
           "frequency",
-          "result_type",
           "results",
           "cost_per_result",
           "amount_spent",
@@ -45,14 +43,13 @@ all_campaigns <- list()
 
 for (i in 1:length(filenames)){
   all_campaigns[[i]] <- read_csv(filenames[i]) %>%
-  select(-Starts, -Ends, -"Reporting starts", -"Reporting ends", -"Ad delivery") %>%
+  select(-Starts, -Ends, -"Reporting starts", -"Reporting ends", -"Ad delivery", -"Result Type") %>%
   rename(ad_name = "Ad name",
          ad_set_name = "Ad set name",
          day = Day,
          reach = Reach,
          impressions = Impressions,
          frequency = Frequency,
-         result_type = "Result Type",
          results = Results,
          cost_per_result = "Cost per result",
          amount_spent = "Amount spent (RUB)",
@@ -70,6 +67,10 @@ for (i in 1:length(filenames)){
                                 mutate_all(facebook_ads_data, as.character))
 }
 
+facebook_ads_data[,4:16] <- transmute_all(facebook_ads_data[,4:16], as.numeric)
+facebook_ads_data$day <- as.Date(facebook_ads_data$day)
+str(facebook_ads_data)
+
 # It is a common practice for the SMM managers to duplicate ad sets to increase the overall reach of the campaign
 # As far as we have the russian data such ad sets are marked as "* — Копия"
 # Ad sets as such are the same in terms of settings but could have been duplicated in different time periods
@@ -79,55 +80,58 @@ facebook_ads_data$ad_set_name <- gsub ("— Копия","", facebook_ads_data$ad
 grep(".— Копия", facebook_ads_data$ad_set_name)
 adsetnames <- unique(facebook_ads_data$ad_set_name)
 
-# Linear regression + loop
-reg <- lm(results ~ amount_spent, all_campaigns[[3]])
+# Linear regression + loop with visualisation
+
+campaign_performance <- list()
+
+for (i in 1:length(all_campaigns)){
+reg <- lm(results ~ amount_spent, all_campaigns[[i]])
 summary(reg)
 
-x <- cbind(predict(reg, interval = "confidence"),
-           predict(reg, interval = "prediction")[,2:3])
-colnames(x)<- 
-  c("fit", "conf lwr", "conf upr", "pred lwr", "pred upr")
+campaign_performance[[i]] <- cbind(predict(reg, interval = "confidence"),
+                       predict(reg, interval = "prediction")[,2:3])
 
-a3 <- cbind(x, all_campaigns[[3]])
+colnames(campaign_performance[[i]]) <- c("fit", "conf lwr", "conf upr", "pred lwr", "pred upr")
 
- a3%>% 
-  ggplot(aes(x = hour))+ # general plot 
+assign(paste0("Campaign",i), 
+       cbind((all_campaigns[[i]][!is.na(all_campaigns[[i]]$results),]), 
+             campaign_performance[[i]])) %>%  
+  ggplot(aes(x = amount_spent))+ # general plot 
+  scale_x_continuous(expand = c(0, 0), limits = c(0,4000))+
+  scale_y_continuous(expand = c(0, 0), limits = c(0,30))+
+  geom_ribbon(aes(ymin = `pred lwr`, ymax = `pred upr`,fill = "Prediction"), alpha = .45)+ # prediction stripe
+  geom_ribbon(aes(ymin =`conf lwr`, ymax = `conf upr`,fill = "Confidence"), alpha = .35)+ # confidence stripe
   
-  geom_ribbon(aes(ymin =`pred lwr`, ymax = `pred upr`,fill = "Prediction"), alpha = .5)+ # prediction stripe
-  geom_ribbon(aes(ymin =`conf lwr`, ymax = `conf upr`,fill = "Confidence"), alpha = .5)+ # confidence stripe
-  
-  geom_line(aes(y= fit, col = "Expected value"))+ # fit line
-  geom_point(aes(y= hourly.volume, col = "Observations"), alpha = .1)+ # hourly.volume dots
+  geom_line(aes(y= fit, col = "Expected budget"))+ # fit line
+  geom_point(aes(y= results, col = "Leads"), alpha = .8)+ # dots
   theme_classic()+
-  scale_fill_manual(values = alpha(c("blue","lightblue"), 0.5))+ #custom colour
+  xlab("Budget")+ # Custom labels
+  ylab("Results")+
+  labs(color='Parameters', fill = "Variation", title = "Results based on the budget", subtitle = paste0("Based on the campaign #", i))+
+  
+  theme(text = element_text(color = "#444444", family = 'Helvetica Neue'), # Custom text
+        plot.title = element_text(size = 13, color = '#333333', hjust = 0.5),
+        plot.subtitle = element_text(size = 9, hjust = 0.5),
+        axis.title = element_text(size = 8, color = '#333333'),
+        legend.title = element_text(size = 7),
+        legend.text = element_text(size = 6))+
+  
+  scale_fill_manual(values = alpha(c("magenta","aquamarine1"), 0.3))+ #custom colour
   scale_color_manual(
-    values = c("red", "black"),
+    values = c("red", "cyan3"),
     guide = guide_legend(override.aes = 
                            list (
                              linetype = c("solid", "blank"),
                              shape = c(NA,16)
-                           ))
-  )
+                           )))+
+  ggsave(paste0("Campaign", i,".png"), width = 15, height = 7, units = "cm")
 
-ggplot1 <- ggplot() +
-  geom_point(aes(x = all_campaigns[[3]]$amount_spent, y = reg$fitted.values),
-             shape = 1, 
-             alpha =0.2) +
-  geom_point(data = all_campaigns[[3]], 
-             aes(x = amount_spent, 
-                 y = results), 
-             color = "red")
-ggplot1
+rm (list = paste0("Campaign",i))
+}
 
-
-# The following loop will provide the ovearall summary of our campaigns and analysis for every campaign
-
-for (i in (1:length(adsetnames))) {
-=======
 # The following loop will provide the ovearall summary of our campaigns and analysis for every campaign
 
 for (i in 1:length(adsetnames)) {
->>>>>>> 21c250d57d7a48d8f40357b330bc7b96a0f80672
   
   temp_df_summary <- facebook_ads_data %>%
     filter(ad_set_name == adsetnames[i],
@@ -319,5 +323,3 @@ CPC_general <- daybyday_time_CPC %>%
 pdf()
 grid.arrange(impression_general,CPM_general,CPL_general,CPC_general, nrow=4,ncol=1, top="Campaigns Comparison")
 dev.off()
-
-# Previous version
