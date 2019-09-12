@@ -96,7 +96,7 @@ summary(reg)
 
 campaign_performance[[i]] <- cbind(predict(reg, interval = "confidence"),
                        predict(reg, interval = "prediction")[,2:3])
-
+campaign_performance[[i]][,4][campaign_performance[[i]][,4] < 0] <-  0
 colnames(campaign_performance[[i]]) <- c("fit", "conf lwr", "conf upr", "pred lwr", "pred upr")
 
 assign(paste0("Campaign",i), 
