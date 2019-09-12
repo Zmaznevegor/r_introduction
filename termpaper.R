@@ -272,6 +272,7 @@ least_effective_ads(KPI = "CPL", maximum = 154)
 comparison <- function(adset) {
 #impressions for Ads at ad_set level on daily basis
 daybyday_time_ad_set_impressions <- facebook_ads_data %>%
+  filter(ad_set_name %in% adset) %>%
   group_by(day,ad_set_name) %>% 
   summarise(impressions_day_ad_set = sum(impressions,na.rm = TRUE) )
 
@@ -284,6 +285,7 @@ impression_general <- daybyday_time_ad_set_impressions %>%
 
 #CPM (cost per 1000) for Ads at ad_set level on daily basis
 daybyday_time_CPM <- facebook_ads_data %>% 
+  filter(ad_set_name %in% adset) %>%
   group_by(day, ad_set_name) %>%
   summarise(CPM_day_ad_set = sum(impressions*CPM/1000,na.rm = TRUE)/sum(impressions,na.rm = TRUE)*1000)
 
@@ -298,6 +300,7 @@ CPM_general <- daybyday_time_CPM %>%
 
 #CPL (cost per results) for Ads at ad_set level on daily basis
 daybyday_time_CPL <- facebook_ads_data %>%
+  filter(ad_set_name %in% adset) %>%
   group_by(day, ad_set_name) %>%
   summarise(CPL_day_ad_set = sum(amount_spent,na.rm = TRUE)/sum(results,na.rm = TRUE))
 
@@ -312,6 +315,7 @@ CPL_general <- daybyday_time_CPL %>%
 
 # CPC (cost per click) for Ads at ad_set level on daily basis
 daybyday_time_CPC <- facebook_ads_data %>%
+  filter(ad_set_name %in% adset) %>%
   group_by(day, ad_set_name) %>%
   summarise(CPC_day_ad_set = sum(link_clicks*CPC,na.rm = TRUE)/sum(link_clicks,na.rm = TRUE))
 
