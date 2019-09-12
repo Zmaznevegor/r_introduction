@@ -12,6 +12,7 @@ library(xlsx)
 library(gridExtra)
 library(lubridate)
 library(staplr)
+library(pdftools)
 
 # Getting all the reports downloaded from the Facebook to our directory
 filenames <- dir(pattern = "*.csv")
