@@ -277,7 +277,7 @@ least_effective_ads(KPI = "CPL", maximum = 154)
 
 # Function that will allow you to visually compare two ad set
 # The parameters are the name of the adsets you wish to compare
-
+comparison <- function(adset) {
 #impressions for Ads at ad_set level on daily basis
 daybyday_time_ad_set_impressions <- facebook_ads_data %>%
   filter(ad_set_name %in% adset) %>%
@@ -338,3 +338,6 @@ CPC_general <- daybyday_time_CPC %>%
 pdf()
 grid.arrange(impression_general,CPM_general,CPL_general,CPC_general, nrow=4,ncol=1, top="Campaigns Comparison")
 dev.off()
+}
+
+comparison(c("[EN]_18countries", "[KZ]_ July", "[RU]_RF", "[UA]_ July") )
