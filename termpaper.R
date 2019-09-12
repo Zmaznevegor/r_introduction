@@ -1,3 +1,8 @@
+# TERM PAPER
+# BAN420 INTRODUCTION TO R 
+# GROUP N9: Cecile Foraison, Egor Zmaznev, Yu Mao
+# ===============================================
+
 library(dplyr)
 library(ggplot2)
 library(tidyr)
@@ -72,15 +77,16 @@ facebook_ads_data$day <- as.Date(facebook_ads_data$day)
 str(facebook_ads_data)
 
 # It is a common practice for the SMM managers to duplicate ad sets to increase the overall reach of the campaign
-# As far as we have the russian data such ad sets are marked as "* — Копия"
+# As far as we have the russian data such ad sets are marked as "* — Копия" (Cyrillic text)
 # Ad sets as such are the same in terms of settings but could have been duplicated in different time periods
-# So we can't just combine them, cause it will affect the day by day analysis
+# So we can't just combine them, cause it will affect the day by day analysis 
  
 facebook_ads_data$ad_set_name <- gsub ("— Копия","", facebook_ads_data$ad_set_name)
 grep(".— Копия", facebook_ads_data$ad_set_name)
 adsetnames <- unique(facebook_ads_data$ad_set_name)
 
-# Linear regression + loop with visualisation
+# Linear regression representing interdependence between results and costs
+# Loop for creating linear regression for each campaign
 
 campaign_performance <- list()
 
@@ -132,6 +138,7 @@ rm (list = paste0("Campaign",i))
 # The following loop will provide the ovearall summary of our campaigns and analysis for every campaign
 
 for (i in 1:length(adsetnames)) {
+  
 # Here we create a data frame with detailed results for each ads for each adset      
   temp_df_summary <- facebook_ads_data %>%
     filter(ad_set_name == adsetnames[i],
@@ -144,6 +151,7 @@ for (i in 1:length(adsetnames)) {
               CPC = (sum(amount_spent, na.rm = TRUE) / sum(link_clicks, na.rm = TRUE)),
               Leads = sum(results, na.rm = TRUE),
               CPL = (sum(amount_spent, na.rm = TRUE) /sum(results, na.rm = TRUE)))
+
 # Here we create a new Total column that will appear at the top of the dataframe to show the global performance of the ad set
   temp_df_summary <- rbind(temp_df_summary, tibble(ad_name = "Total", 
                                                    Impressions = sum(temp_df_summary$Impressions, na.rm = TRUE),
@@ -155,7 +163,7 @@ for (i in 1:length(adsetnames)) {
                                                    CPL = sum(`Amount Spent (RUB)`, na.rm = TRUE)/sum(Leads, na.rm = TRUE))) %>%
     arrange(-Impressions)
           
-   # Here we create a plot that will visualize the Impression KPI over the days 
+# Plot that will visualize the Impression KPI over the days 
   plot_impressions <- 
     facebook_ads_data %>%
     filter(ad_set_name == adsetnames[i],
@@ -173,7 +181,7 @@ for (i in 1:length(adsetnames)) {
     xlab("Days")+
     theme_classic() 
   
-   # Here we create a plot that will visualize the CPM KPI over the days  
+# Plot that will visualize the CPM KPI over the days  
   plot_CPM <- 
     facebook_ads_data %>%
     filter(ad_set_name == adsetnames[i],
@@ -195,7 +203,7 @@ for (i in 1:length(adsetnames)) {
     ylab("CPM (RUB)")+ xlab("Days") +
     theme_classic()
 
-   # Here we create a plot that will visualize the CPC & CPL KPI over the days  
+# Plot that will visualize the CPC & CPL KPI over the days  
   plot_CPC_CPL <- 
     facebook_ads_data %>%
     filter(ad_set_name == adsetnames[i],
@@ -226,7 +234,7 @@ for (i in 1:length(adsetnames)) {
     theme(legend.position = "bottom",
           legend.direction = "horizontal") 
   
- # Here, the PDFs are created with the Dataframe and all the plots   
+# The PDFs are created with the Dataframe and all the plots   
   pdf(paste(substring(adsetnames[i], 1,), ".pdf"), height = 11, width = 10)
   text <- textGrob(paste("REPORT: ", "Ad set: ", adsetnames[i]), gp = gpar(fontsize = 20))
   temp_df_gtable <- tableGrob(temp_df_summary)
@@ -234,6 +242,7 @@ for (i in 1:length(adsetnames)) {
   dev.off()
 }
 
+# A single document with all the data
 pdf_combine(input =paste(adsetnames, ".pdf"), output = "all_in_one.pdf")
 
 # Here is the function that is used to know which ads are not performing well
@@ -266,10 +275,9 @@ least_effective_ads <- function(KPI, maximum) {
 least_effective_ads(KPI = "CPL", maximum = 154)
 
 
-
-# Here is the function that will allow you to visually compare two ad set
+# Function that will allow you to visually compare two ad set
 # The parameters are the name of the adsets you wish to compare
-comparison <- function(adset) {
+
 #impressions for Ads at ad_set level on daily basis
 daybyday_time_ad_set_impressions <- facebook_ads_data %>%
   filter(ad_set_name %in% adset) %>%
@@ -298,7 +306,7 @@ CPM_general <- daybyday_time_CPM %>%
   labs(color="")+
   theme_classic() 
 
-#CPL (cost per results) for Ads at ad_set level on daily basis
+# CPL (cost per results) for Ads at ad_set level on daily basis
 daybyday_time_CPL <- facebook_ads_data %>%
   filter(ad_set_name %in% adset) %>%
   group_by(day, ad_set_name) %>%
@@ -330,7 +338,3 @@ CPC_general <- daybyday_time_CPC %>%
 pdf()
 grid.arrange(impression_general,CPM_general,CPL_general,CPC_general, nrow=4,ncol=1, top="Campaigns Comparison")
 dev.off()
-          
-}
-
-comparison(c("[EN]_18countries","[KZ]_ July", "[RU]_RF", "[UA]_ July"))
